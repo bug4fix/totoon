@@ -231,8 +231,11 @@ func listOfObjectsToToon(key string, data []interface{}, indent int, level int) 
 									for _, nk := range nestedKeys {
 										nv := ""
 										if nvVal, exists := nestedObj[nk]; exists {
-											nv = valueToToon(nvVal, 0, 0)
+											nv = valueToToonInline(nvVal)
 											if strings.Contains(nv, ",") || strings.Contains(nv, ";") || strings.Contains(nv, ":") {
+												if strings.Contains(nv, `"`) {
+													nv = strings.ReplaceAll(nv, `"`, `\"`)
+												}
 												nv = fmt.Sprintf(`"%s"`, nv)
 											}
 										}
@@ -246,7 +249,7 @@ func listOfObjectsToToon(key string, data []interface{}, indent int, level int) 
 							// Array of primitives: use bracket notation
 							items := make([]string, len(val))
 							for j, item := range val {
-								items[j] = valueToToon(item, 0, 0)
+								items[j] = valueToToonInline(item)
 							}
 							value = fmt.Sprintf("[%s]", strings.Join(items, ","))
 						}
@@ -254,11 +257,16 @@ func listOfObjectsToToon(key string, data []interface{}, indent int, level int) 
 						value = "[]"
 					}
 				case map[string]interface{}:
-					// Nested object: use compact key:value format
+					// Nested object: use compact key:value format (inline, no newlines)
 					var nestedItems []string
 					for nk, nv := range val {
-						nvStr := valueToToon(nv, 0, 0)
-						if strings.Contains(nvStr, ",") || strings.Contains(nvStr, ":") {
+						nvStr := valueToToonInline(nv)
+						// Quote if contains special chars that would break the format
+						if strings.Contains(nvStr, ",") || strings.Contains(nvStr, ":") || strings.Contains(nvStr, ";") || strings.Contains(nvStr, "\n") {
+							// Escape quotes if present
+							if strings.Contains(nvStr, `"`) {
+								nvStr = strings.ReplaceAll(nvStr, `"`, `\"`)
+							}
 							nvStr = fmt.Sprintf(`"%s"`, nvStr)
 						}
 						nestedItems = append(nestedItems, fmt.Sprintf("%s:%s", nk, nvStr))
@@ -357,5 +365,100 @@ func escapeString(s string) string {
 	}
 	builder.WriteRune('"')
 	return builder.String()
+}
+
+// valueToToonInline converts a value to TOON format without newlines (for inline use)
+func valueToToonInline(value ToonValue) string {
+	if value == nil {
+		return "null"
+	}
+
+	switch v := value.(type) {
+	case bool:
+		if v {
+			return "true"
+		}
+		return "false"
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		return fmt.Sprintf("%v", v)
+	case string:
+		return escapeString(v)
+	case []interface{}:
+		if len(v) == 0 {
+			return "[]"
+		}
+		// For arrays, check if it's an array of objects
+		if _, isObj := v[0].(map[string]interface{}); isObj {
+			// Array of objects: use compact inline format
+			nestedKeysMap := make(map[string]bool)
+			var nestedKeys []string
+			for _, nestedItem := range v {
+				if nestedObj, ok := nestedItem.(map[string]interface{}); ok {
+					for nk := range nestedObj {
+						if !nestedKeysMap[nk] {
+							nestedKeysMap[nk] = true
+							nestedKeys = append(nestedKeys, nk)
+						}
+					}
+				}
+			}
+			nestedFields := strings.Join(nestedKeys, ",")
+			nestedCount := len(v)
+			
+			var nestedRows []string
+			for _, nestedItem := range v {
+				if nestedObj, ok := nestedItem.(map[string]interface{}); ok {
+					var nestedRowValues []string
+					for _, nk := range nestedKeys {
+						nv := ""
+						if nvVal, exists := nestedObj[nk]; exists {
+							nv = valueToToonInline(nvVal)
+							if strings.Contains(nv, ",") || strings.Contains(nv, ";") || strings.Contains(nv, ":") {
+								if strings.Contains(nv, `"`) {
+									nv = strings.ReplaceAll(nv, `"`, `\"`)
+								}
+								nv = fmt.Sprintf(`"%s"`, nv)
+							}
+						}
+						nestedRowValues = append(nestedRowValues, nv)
+					}
+					nestedRows = append(nestedRows, strings.Join(nestedRowValues, ","))
+				}
+			}
+			return fmt.Sprintf("[%d]{%s}:%s", nestedCount, nestedFields, strings.Join(nestedRows, ";"))
+		} else {
+			// Array of primitives: use bracket notation
+			items := make([]string, len(v))
+			for j, item := range v {
+				items[j] = valueToToonInline(item)
+			}
+			return fmt.Sprintf("[%s]", strings.Join(items, ","))
+		}
+	case map[string]interface{}:
+		// Nested object: use compact key:value format (recursive, but inline)
+		var nestedItems []string
+		for nk, nv := range v {
+			nvStr := valueToToonInline(nv)
+			if strings.Contains(nvStr, ",") || strings.Contains(nvStr, ":") || strings.Contains(nvStr, ";") || strings.Contains(nvStr, "\n") {
+				if strings.Contains(nvStr, `"`) {
+					nvStr = strings.ReplaceAll(nvStr, `"`, `\"`)
+				}
+				nvStr = fmt.Sprintf(`"%s"`, nvStr)
+			}
+			nestedItems = append(nestedItems, fmt.Sprintf("%s:%s", nk, nvStr))
+		}
+		return fmt.Sprintf("{%s}", strings.Join(nestedItems, ","))
+	default:
+		// Try JSON conversion for custom types
+		jsonBytes, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Sprintf("%v", value)
+		}
+		var converted interface{}
+		if err := json.Unmarshal(jsonBytes, &converted); err != nil {
+			return fmt.Sprintf("%v", value)
+		}
+		return valueToToonInline(converted)
+	}
 }
 

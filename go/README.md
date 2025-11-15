@@ -7,14 +7,14 @@
 In your Go project, run:
 
 ```bash
-go get github.com/bug4fix/totoon/go@v0.1.0
+go get github.com/bug4fix/totoon/go
 ```
 
 **Note**: You must be in a Go module (a directory with a `go.mod` file). If you don't have one, initialize it first:
 
 ```bash
 go mod init your-project-name
-go get github.com/bug4fix/totoon/go@v0.1.0
+go get github.com/bug4fix/totoon/go
 ```
 
 ## Usage
@@ -74,7 +74,7 @@ cd test-totoon
 go mod init test-totoon
 
 # Get the package
-go get github.com/bug4fix/totoon/go@v0.1.0
+go get github.com/bug4fix/totoon/go
 
 # Create a test file
 cat > main.go << 'EOF'
