@@ -4,6 +4,7 @@ Format converters for various input formats to TOON
 
 import json
 from pathlib import Path
+from typing import Union
 
 try:
     import yaml
