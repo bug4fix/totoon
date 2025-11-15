@@ -1,6 +1,6 @@
 [package]
 name = "totoon"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Convert any data format to TOON (Token-Oriented Object Notation)"
 license = "MIT"

@@ -34,11 +34,9 @@ fn main() {
 
 Output:
 ```
-users:
-  name | age
-  --- | ---
-  Alice | 30
-  Bob | 25
+users[2]{name,age}:
+  Alice,30
+  Bob,25
 ```
 
 ### Convert from JSON String
