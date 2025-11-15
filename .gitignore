@@ -89,4 +89,5 @@ README_PUBLISHING.md
 SETUP.md
 FILES_TO_COMMIT.md
 scripts/publish.sh
-
+local_tests
+local_tests.*

@@ -39,10 +39,11 @@ def test_list_of_objects():
         {"name": "Bob", "age": 25}
     ]
     result = to_toon(data)
-    # Should use tabular format
-    assert "name | age" in result
+    # Should use tabular format: [count]{field1,field2}:
+    assert "[2]{" in result or "[2]{name,age}:" in result
     assert "Alice" in result
     assert "Bob" in result
+    assert "," in result  # Comma-separated values
 
 
 def test_simple_list():
@@ -84,8 +85,8 @@ def test_complex_structure():
         }
     }
     result = to_toon(data)
-    assert "users:" in result
-    assert "name | age | active" in result
+    assert "users[" in result  # Should have users[count]{fields}:
     assert "metadata:" in result
     assert "count: 2" in result
+    assert "," in result  # Comma-separated values
 

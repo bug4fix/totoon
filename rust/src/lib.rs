@@ -127,7 +127,7 @@ fn list_of_objects_to_toon(
     }
 
     let mut lines = Vec::new();
-    let mut prefix = " ".repeat(indent * level);
+    let prefix = " ".repeat(indent * level);
 
     // Collect all unique keys from all objects
     let mut seen_keys = HashMap::new();
@@ -148,35 +148,100 @@ fn list_of_objects_to_toon(
     let mut all_keys: Vec<String> = seen_keys.keys().cloned().collect();
     all_keys.sort();
 
-    // Header row
+    // Header format: key[count]{field1,field2,field3}:
+    let count = arr.len();
+    let fields = all_keys.join(",");
     if !key.is_empty() {
-        lines.push(format!("{}{}:", prefix, key));
-        prefix = " ".repeat(indent * (level + 1));
+        lines.push(format!("{}{}[{}]{{{}}}:", prefix, key, count, fields));
+    } else {
+        lines.push(format!("{}[{}]{{{}}}:", prefix, count, fields));
     }
 
-    let header = all_keys.join(" | ");
-    lines.push(format!("{}{}", prefix, header));
-
-    // Separator
-    let separator = all_keys.iter().map(|_| "---").collect::<Vec<_>>().join(" | ");
-    lines.push(format!("{}{}", prefix, separator));
-
-    // Data rows
+    // Data rows: comma-separated values with 2 spaces indentation
+    let data_prefix = "  "; // Two spaces for data rows
     let empty_value = Value::String(String::new());
     for item in arr {
         if let Value::Object(obj) = item {
             let mut row_values = Vec::new();
             for k in &all_keys {
                 let value = obj.get(k).unwrap_or(&empty_value);
-                let mut value_str = value_to_toon(value, 0, 0);
-                // Handle values with pipes or newlines
-                if value_str.contains('|') || value_str.contains('\n') {
-                    value_str = format!("\"{}\"", value_str);
-                }
+                let value_str = match value {
+                    Value::Array(arr_val) => {
+                        if arr_val.is_empty() {
+                            "[]".to_string()
+                        } else if let Some(Value::Object(_)) = arr_val.first() {
+                            // Array of objects: use compact inline tabular format
+                            let mut nested_keys_map = HashMap::new();
+                            for nested_item in arr_val {
+                                if let Value::Object(nested_obj) = nested_item {
+                                    for nk in nested_obj.keys() {
+                                        nested_keys_map.insert(nk.clone(), true);
+                                    }
+                                }
+                            }
+                            let mut nested_keys: Vec<String> = nested_keys_map.keys().cloned().collect();
+                            nested_keys.sort();
+                            let nested_fields = nested_keys.join(",");
+                            let nested_count = arr_val.len();
+                            
+                            // Build compact data rows separated by semicolons
+                            let mut nested_rows = Vec::new();
+                            for nested_item in arr_val {
+                                if let Value::Object(nested_obj) = nested_item {
+                                    let mut nested_row_values = Vec::new();
+                                    for nk in &nested_keys {
+                                        let nv = nested_obj.get(nk).unwrap_or(&empty_value);
+                                        let mut nv_str = value_to_toon(nv, 0, 0);
+                                        if nv_str.contains(',') || nv_str.contains(';') || nv_str.contains(':') {
+                                            nv_str = format!("\"{}\"", nv_str);
+                                        }
+                                        nested_row_values.push(nv_str);
+                                    }
+                                    nested_rows.push(nested_row_values.join(","));
+                                }
+                            }
+                            format!("[{}]{{{}}}:{}", nested_count, nested_fields, nested_rows.join(";"))
+                        } else {
+                            // Array of primitives: use bracket notation
+                            let items: Vec<String> = arr_val.iter().map(|v| value_to_toon(v, 0, 0)).collect();
+                            format!("[{}]", items.join(","))
+                        }
+                    }
+                    Value::Object(nested_obj) => {
+                        // Nested object: use compact key:value format
+                        let mut nested_items = Vec::new();
+                        let mut nested_keys: Vec<String> = nested_obj.keys().cloned().collect();
+                        nested_keys.sort();
+                        for nk in nested_keys {
+                            let nv = nested_obj.get(&nk).unwrap_or(&empty_value);
+                            let mut nv_str = value_to_toon(nv, 0, 0);
+                            if nv_str.contains(',') || nv_str.contains(':') {
+                                nv_str = format!("\"{}\"", nv_str);
+                            }
+                            nested_items.push(format!("{}:{}", nk, nv_str));
+                        }
+                        format!("{{{}}}", nested_items.join(","))
+                    }
+                    _ => {
+                        let mut value_str = value_to_toon(value, 0, 0);
+                        // Handle values with commas, newlines, colons, or semicolons
+                        // Only quote if not already quoted and contains special chars
+                        if !(value_str.starts_with('"') && value_str.ends_with('"')) {
+                            if value_str.contains(',') || value_str.contains('\n') || value_str.contains(':') || value_str.contains(';') {
+                                // Escape quotes if present
+                                if value_str.contains('"') {
+                                    value_str = value_str.replace('"', "\\\"");
+                                }
+                                value_str = format!("\"{}\"", value_str);
+                            }
+                        }
+                        value_str
+                    }
+                };
                 row_values.push(value_str);
             }
-            let row = row_values.join(" | ");
-            lines.push(format!("{}{}", prefix, row));
+            let row = row_values.join(",");
+            lines.push(format!("{}{}", data_prefix, row));
         }
     }
 
@@ -195,14 +260,15 @@ fn value_to_toon(value: &Value, indent: usize, level: usize) -> String {
 }
 
 fn escape_string(s: &str) -> String {
-    // Check if string needs escaping
-    let needs_escaping = s.chars().any(|c| matches!(c, '\n' | '\t' | ':' | '|' | '"'));
+    // Only escape actual control characters (newlines, tabs, etc.)
+    // Let the caller decide if quoting is needed for other special chars
+    let has_control_chars = s.chars().any(|c| matches!(c, '\n' | '\t' | '\r'));
 
-    if !needs_escaping {
+    if !has_control_chars {
         return s.to_string();
     }
 
-    // Escape the string
+    // Escape control characters
     let mut result = String::with_capacity(s.len() + 2);
     result.push('"');
     for c in s.chars() {
@@ -210,6 +276,7 @@ fn escape_string(s: &str) -> String {
             '\\' => result.push_str("\\\\"),
             '"' => result.push_str("\\\""),
             '\n' => result.push_str("\\n"),
+            '\r' => result.push_str("\\r"),
             '\t' => result.push_str("\\t"),
             _ => result.push(c),
         }
@@ -259,10 +326,11 @@ mod tests {
             {"name": "Bob", "age": 25}
         ]);
         let result = to_toon(&data);
-        // Keys are sorted alphabetically in Rust (age comes before name)
-        assert!(result.contains("age | name") || result.contains("name | age"));
+        // Should have [2]{fields}: format
+        assert!(result.contains("[2]{"));
         assert!(result.contains("Alice"));
         assert!(result.contains("Bob"));
+        assert!(result.contains(",")); // Comma-separated values
     }
 
     #[test]
@@ -308,9 +376,8 @@ mod tests {
             }
         });
         let result = to_toon(&data);
-        assert!(result.contains("users:"));
-        // Keys are sorted alphabetically (active, age, name)
-        assert!(result.contains("active") && result.contains("age") && result.contains("name"));
+        assert!(result.contains("users["));
+        assert!(result.contains(",")); // Comma-separated values
         assert!(result.contains("metadata:"));
         assert!(result.contains("count: 2"));
     }
@@ -341,9 +408,8 @@ mod tests {
     fn test_json_to_toon_complex() {
         let json_str = r#"{"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}"#;
         let result = json_to_toon(json_str).unwrap();
-        assert!(result.contains("users:"));
-        // Keys are sorted alphabetically
-        assert!(result.contains("age") && result.contains("name"));
+        assert!(result.contains("users["));
+        assert!(result.contains(",")); // Comma-separated values
     }
 }
 

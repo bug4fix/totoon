@@ -181,24 +181,17 @@ func listOfObjectsToToon(key string, data []interface{}, indent int, level int) 
 		return "[]"
 	}
 
-	// Header row
+	// Header format: key[count]{field1,field2,field3}:
+	count := len(data)
+	fields := strings.Join(allKeys, ",")
 	if key != "" {
-		lines = append(lines, fmt.Sprintf("%s%s:", prefix, key))
-		prefix = strings.Repeat(" ", indent*(level+1))
+		lines = append(lines, fmt.Sprintf("%s%s[%d]{%s}:", prefix, key, count, fields))
+	} else {
+		lines = append(lines, fmt.Sprintf("%s[%d]{%s}:", prefix, count, fields))
 	}
 
-	header := strings.Join(allKeys, " | ")
-	lines = append(lines, fmt.Sprintf("%s%s", prefix, header))
-
-	// Separator
-	separatorParts := make([]string, len(allKeys))
-	for i := range separatorParts {
-		separatorParts[i] = "---"
-	}
-	separator := strings.Join(separatorParts, " | ")
-	lines = append(lines, fmt.Sprintf("%s%s", prefix, separator))
-
-	// Data rows
+	// Data rows: comma-separated values with 2 spaces indentation
+	dataPrefix := "  " // Two spaces for data rows
 	for _, item := range data {
 		obj, ok := item.(map[string]interface{})
 		if !ok {
@@ -209,16 +202,87 @@ func listOfObjectsToToon(key string, data []interface{}, indent int, level int) 
 		for i, k := range allKeys {
 			value := ""
 			if v, exists := obj[k]; exists {
-				value = valueToToon(v, 0, 0)
-				// Handle values with pipes or newlines
-				if strings.Contains(value, "|") || strings.Contains(value, "\n") {
-					value = fmt.Sprintf(`"%s"`, value)
+				// Handle nested structures specially
+				switch val := v.(type) {
+				case []interface{}:
+					if len(val) > 0 {
+						if _, isObj := val[0].(map[string]interface{}); isObj {
+							// Array of objects: use compact inline tabular format
+							nestedKeysMap := make(map[string]bool)
+							var nestedKeys []string
+							for _, nestedItem := range val {
+								if nestedObj, ok := nestedItem.(map[string]interface{}); ok {
+									for nk := range nestedObj {
+										if !nestedKeysMap[nk] {
+											nestedKeysMap[nk] = true
+											nestedKeys = append(nestedKeys, nk)
+										}
+									}
+								}
+							}
+							nestedFields := strings.Join(nestedKeys, ",")
+							nestedCount := len(val)
+							
+							// Build compact data rows separated by semicolons
+							var nestedRows []string
+							for _, nestedItem := range val {
+								if nestedObj, ok := nestedItem.(map[string]interface{}); ok {
+									var nestedRowValues []string
+									for _, nk := range nestedKeys {
+										nv := ""
+										if nvVal, exists := nestedObj[nk]; exists {
+											nv = valueToToon(nvVal, 0, 0)
+											if strings.Contains(nv, ",") || strings.Contains(nv, ";") || strings.Contains(nv, ":") {
+												nv = fmt.Sprintf(`"%s"`, nv)
+											}
+										}
+										nestedRowValues = append(nestedRowValues, nv)
+									}
+									nestedRows = append(nestedRows, strings.Join(nestedRowValues, ","))
+								}
+							}
+							value = fmt.Sprintf("[%d]{%s}:%s", nestedCount, nestedFields, strings.Join(nestedRows, ";"))
+						} else {
+							// Array of primitives: use bracket notation
+							items := make([]string, len(val))
+							for j, item := range val {
+								items[j] = valueToToon(item, 0, 0)
+							}
+							value = fmt.Sprintf("[%s]", strings.Join(items, ","))
+						}
+					} else {
+						value = "[]"
+					}
+				case map[string]interface{}:
+					// Nested object: use compact key:value format
+					var nestedItems []string
+					for nk, nv := range val {
+						nvStr := valueToToon(nv, 0, 0)
+						if strings.Contains(nvStr, ",") || strings.Contains(nvStr, ":") {
+							nvStr = fmt.Sprintf(`"%s"`, nvStr)
+						}
+						nestedItems = append(nestedItems, fmt.Sprintf("%s:%s", nk, nvStr))
+					}
+					value = fmt.Sprintf("{%s}", strings.Join(nestedItems, ","))
+				default:
+					value = valueToToon(v, 0, 0)
+					// Handle values with commas, newlines, colons, or semicolons
+					// Only quote if not already quoted and contains special chars
+					if !(strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) {
+						if strings.Contains(value, ",") || strings.Contains(value, "\n") || strings.Contains(value, ":") || strings.Contains(value, ";") {
+							// Escape quotes if present
+							if strings.Contains(value, `"`) {
+								value = strings.ReplaceAll(value, `"`, `\"`)
+							}
+							value = fmt.Sprintf(`"%s"`, value)
+						}
+					}
 				}
 			}
 			rowValues[i] = value
 		}
-		row := strings.Join(rowValues, " | ")
-		lines = append(lines, fmt.Sprintf("%s%s", prefix, row))
+		row := strings.Join(rowValues, ",")
+		lines = append(lines, fmt.Sprintf("%s%s", dataPrefix, row))
 	}
 
 	return strings.Join(lines, "\n")
@@ -258,10 +322,11 @@ func valueToToon(value ToonValue, indent int, level int) string {
 }
 
 func escapeString(s string) string {
-	// Check if string needs escaping
+	// Only escape actual control characters (newlines, tabs, etc.)
+	// Let the caller decide if quoting is needed for other special chars
 	needsEscaping := false
 	for _, char := range s {
-		if char == '\n' || char == '\t' || char == ':' || char == '|' || char == '"' {
+		if char == '\n' || char == '\t' || char == '\r' {
 			needsEscaping = true
 			break
 		}
@@ -271,7 +336,7 @@ func escapeString(s string) string {
 		return s
 	}
 
-	// Escape the string
+	// Escape control characters
 	var builder strings.Builder
 	builder.WriteRune('"')
 	for _, char := range s {
@@ -282,6 +347,8 @@ func escapeString(s string) string {
 			builder.WriteString("\\\"")
 		case '\n':
 			builder.WriteString("\\n")
+		case '\r':
+			builder.WriteString("\\r")
 		case '\t':
 			builder.WriteString("\\t")
 		default:

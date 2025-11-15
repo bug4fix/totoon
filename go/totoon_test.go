@@ -50,14 +50,17 @@ func TestToToon_ListOfObjects(t *testing.T) {
 		map[string]interface{}{"name": "Bob", "age": 25},
 	}
 	result := ToToon(data)
-	if !strings.Contains(result, "name | age") {
-		t.Errorf("Expected 'name | age' in result, got: %s", result)
+	if !strings.Contains(result, "[2]{") {
+		t.Errorf("Expected '[2]{' in result, got: %s", result)
 	}
 	if !strings.Contains(result, "Alice") {
 		t.Errorf("Expected 'Alice' in result, got: %s", result)
 	}
 	if !strings.Contains(result, "Bob") {
 		t.Errorf("Expected 'Bob' in result, got: %s", result)
+	}
+	if !strings.Contains(result, ",") {
+		t.Errorf("Expected comma-separated values, got: %s", result)
 	}
 }
 
@@ -121,11 +124,11 @@ func TestToToon_ComplexStructure(t *testing.T) {
 		},
 	}
 	result := ToToon(data)
-	if !strings.Contains(result, "users:") {
-		t.Errorf("Expected 'users:' in result, got: %s", result)
+	if !strings.Contains(result, "users[") {
+		t.Errorf("Expected 'users[' in result, got: %s", result)
 	}
-	if !strings.Contains(result, "name | age | active") {
-		t.Errorf("Expected 'name | age | active' in result, got: %s", result)
+	if !strings.Contains(result, ",") {
+		t.Errorf("Expected comma-separated values, got: %s", result)
 	}
 	if !strings.Contains(result, "metadata:") {
 		t.Errorf("Expected 'metadata:' in result, got: %s", result)
@@ -171,11 +174,11 @@ func TestJSONToToon_Complex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !strings.Contains(result, "users:") {
-		t.Errorf("Expected 'users:' in result, got: %s", result)
+	if !strings.Contains(result, "users[") {
+		t.Errorf("Expected 'users[' in result, got: %s", result)
 	}
-	if !strings.Contains(result, "name | age") {
-		t.Errorf("Expected 'name | age' in result, got: %s", result)
+	if !strings.Contains(result, ",") {
+		t.Errorf("Expected comma-separated values, got: %s", result)
 	}
 }
 

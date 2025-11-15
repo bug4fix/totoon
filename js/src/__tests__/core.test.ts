@@ -31,9 +31,10 @@ describe('toToon', () => {
       { name: 'Bob', age: 25 },
     ];
     const result = toToon(data);
-    expect(result).toContain('name | age');
+    expect(result).toContain('[2]{');
     expect(result).toContain('Alice');
     expect(result).toContain('Bob');
+    expect(result).toContain(','); // Comma-separated values
   });
 
   test('converts simple list', () => {
@@ -73,8 +74,8 @@ describe('toToon', () => {
       },
     };
     const result = toToon(data);
-    expect(result).toContain('users:');
-    expect(result).toContain('name | age | active');
+    expect(result).toContain('users[');
+    expect(result).toContain(','); // Comma-separated values
     expect(result).toContain('metadata:');
     expect(result).toContain('count: 2');
   });

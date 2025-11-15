@@ -143,7 +143,7 @@ function listOfObjectsToToon(
   }
 
   const lines: string[] = [];
-  let prefix = ' '.repeat(indent * level);
+  const prefix = ' '.repeat(indent * level);
 
   // Get all unique keys from all objects, preserving insertion order
   const allKeysDict: { [key: string]: boolean } = {};
@@ -158,33 +158,90 @@ function listOfObjectsToToon(
     return '[]';
   }
 
-  // Header row (keys)
+  // Header format: key[count]{field1,field2,field3}:
+  const count = data.length;
+  const fields = allKeys.join(',');
   if (key) {
-    lines.push(`${prefix}${key}:`);
-    prefix = ' '.repeat(indent * (level + 1));
+    lines.push(`${prefix}${key}[${count}]{${fields}}:`);
+  } else {
+    lines.push(`${prefix}[${count}]{${fields}}:`);
   }
 
-  const header = allKeys.join(' | ');
-  lines.push(`${prefix}${header}`);
-
-  // Separator
-  const separator = allKeys.map(() => '---').join(' | ');
-  lines.push(`${prefix}${separator}`);
-
-  // Data rows
+  // Data rows: comma-separated values with 2 spaces indentation
+  const dataPrefix = '  ';  // Two spaces for data rows
   for (const obj of data) {
     const rowValues: string[] = [];
     for (const k of allKeys) {
       const value = obj[k] ?? '';
-      let valueStr = valueToToon(value, 0, 0);
-      // Handle values with pipes or newlines
-      if (valueStr.includes('|') || valueStr.includes('\n')) {
-        valueStr = `"${valueStr}"`;
+      let valueStr: string;
+      
+      // Handle nested structures specially
+      if (Array.isArray(value)) {
+        if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null && !Array.isArray(value[0])) {
+          // Array of objects: use compact inline tabular format
+          const nestedKeysDict: { [key: string]: boolean } = {};
+          for (const nestedObj of value) {
+            for (const nk of Object.keys(nestedObj)) {
+              nestedKeysDict[nk] = true;
+            }
+          }
+          const nestedKeys = Object.keys(nestedKeysDict);
+          const nestedFields = nestedKeys.join(',');
+          const nestedCount = value.length;
+          
+          // Build compact data rows separated by semicolons
+          const nestedRows: string[] = [];
+          for (const nestedObj of value) {
+            const nestedRowValues: string[] = [];
+            for (const nk of nestedKeys) {
+              const nv = (nestedObj as any)[nk] ?? '';
+              let nvStr = valueToToon(nv, 0, 0);
+              // Escape if contains special chars
+              if (nvStr.includes(',') || nvStr.includes(';') || nvStr.includes(':')) {
+                nvStr = `"${nvStr}"`;
+              }
+              nestedRowValues.push(nvStr);
+            }
+            nestedRows.push(nestedRowValues.join(','));
+          }
+          
+          valueStr = `[${nestedCount}]{${nestedFields}}:${nestedRows.join(';')}`;
+        } else {
+          // Array of primitives: use bracket notation
+          const items = value.map(item => valueToToon(item, 0, 0));
+          valueStr = `[${items.join(',')}]`;
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        // Nested object: use compact key:value format
+        const nestedItems: string[] = [];
+        for (const [nk, nv] of Object.entries(value)) {
+          let nvStr = valueToToon(nv, 0, 0);
+          // Escape if contains special chars
+          if (nvStr.includes(',') || nvStr.includes(':')) {
+            nvStr = `"${nvStr}"`;
+          }
+          nestedItems.push(`${nk}:${nvStr}`);
+        }
+        valueStr = `{${nestedItems.join(',')}}`;
+      } else {
+        valueStr = valueToToon(value, 0, 0);
+        // Handle values with commas, newlines, colons, or semicolons
+        // Only quote if not already quoted and contains special chars
+        if (!(valueStr.startsWith('"') && valueStr.endsWith('"'))) {
+          if (valueStr.includes(',') || valueStr.includes('\n') || valueStr.includes(':') || valueStr.includes(';')) {
+            // Escape quotes if present
+            if (valueStr.includes('"')) {
+              valueStr = valueStr.replace(/"/g, '\\"');
+            }
+            valueStr = `"${valueStr}"`;
+          }
+        }
       }
+      
       rowValues.push(valueStr);
     }
-    const row = rowValues.join(' | ');
-    lines.push(`${prefix}${row}`);
+    const row = rowValues.join(',');
+    lines.push(`${dataPrefix}${row}`);
   }
 
   return lines.join('\n');
@@ -204,12 +261,15 @@ function valueToToon(value: ToonValue, indent: number, level: number): string {
   }
 
   if (typeof value === 'string') {
-    // Escape if contains special characters
-    if (/[\n\t:|"]/.test(value)) {
+    // Only escape actual control characters (newlines, tabs, etc.)
+    // Let the caller decide if quoting is needed for other special chars
+    if (/[\n\t\r]/.test(value)) {
       const escaped = value
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"')
-        .replace(/\n/g, '\\n');
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
       return `"${escaped}"`;
     }
     return value;

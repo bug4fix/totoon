@@ -119,6 +119,8 @@ def _list_of_objects_to_toon(key: str, data: list, indent: int, level: int) -> s
     """
     Convert list of objects to TOON tabular format.
     This is TOON's key feature - compact representation of uniform arrays.
+    Format: key[count]{field1,field2,field3}:
+              value1,value2,value3
     """
     if not data or not isinstance(data[0], dict):
         return _list_to_toon(data, indent, level)
@@ -137,30 +139,78 @@ def _list_of_objects_to_toon(key: str, data: list, indent: int, level: int) -> s
     if not all_keys:
         return "[]"
     
-    # Header row (keys)
+    # Header format: key[count]{field1,field2,field3}:
     if key:
-        lines.append(f"{prefix}{key}:")
-        prefix = " " * (indent * (level + 1))
+        count = len(data)
+        fields = ",".join(all_keys)
+        header = f"{prefix}{key}[{count}]{{{fields}}}:"
+        lines.append(header)
+    else:
+        count = len(data)
+        fields = ",".join(all_keys)
+        header = f"{prefix}[{count}]{{{fields}}}:"
+        lines.append(header)
     
-    header = " | ".join(all_keys)
-    lines.append(f"{prefix}{header}")
-    
-    # Separator
-    separator = " | ".join(["---"] * len(all_keys))
-    lines.append(f"{prefix}{separator}")
-    
-    # Data rows
+    # Data rows: comma-separated values with 2 spaces indentation
+    data_prefix = "  "  # Two spaces for data rows
     for obj in data:
         row_values = []
         for k in all_keys:
             value = obj.get(k, "")
-            value_str = _value_to_toon(value, 0, 0)
-            # Handle values with pipes or newlines
-            if "|" in value_str or "\n" in value_str:
-                value_str = f'"{value_str}"'
+            # Handle nested structures specially
+            if isinstance(value, list):
+                if value and isinstance(value[0], dict):
+                    # Array of objects: use compact inline tabular format
+                    # Get all unique keys from nested objects
+                    nested_keys_dict = {}
+                    for nested_obj in value:
+                        for nk in nested_obj.keys():
+                            nested_keys_dict[nk] = None
+                    nested_keys = list(nested_keys_dict.keys())
+                    nested_fields = ",".join(nested_keys)
+                    nested_count = len(value)
+                    
+                    # Build compact data rows separated by semicolons
+                    nested_rows = []
+                    for nested_obj in value:
+                        nested_row_values = []
+                        for nk in nested_keys:
+                            nv = nested_obj.get(nk, "")
+                            nv_str = _value_to_toon(nv, 0, 0)
+                            # Escape if contains special chars
+                            if "," in nv_str or ";" in nv_str or ":" in nv_str:
+                                nv_str = f'"{nv_str}"'
+                            nested_row_values.append(nv_str)
+                        nested_rows.append(",".join(nested_row_values))
+                    
+                    value_str = f"[{nested_count}]{{{nested_fields}}}:{';'.join(nested_rows)}"
+                else:
+                    # Array of primitives: use bracket notation
+                    items = [_value_to_toon(item, 0, 0) for item in value]
+                    value_str = f"[{','.join(items)}]"
+            elif isinstance(value, dict):
+                # Nested object: use compact key:value format
+                nested_items = []
+                for nk, nv in value.items():
+                    nv_str = _value_to_toon(nv, 0, 0)
+                    # Escape if contains special chars
+                    if "," in nv_str or ":" in nv_str:
+                        nv_str = f'"{nv_str}"'
+                    nested_items.append(f"{nk}:{nv_str}")
+                value_str = f"{{{','.join(nested_items)}}}"
+            else:
+                value_str = _value_to_toon(value, 0, 0)
+                # Handle values with commas, newlines, colons, or semicolons
+                # Only quote if not already quoted and contains special chars
+                if not (value_str.startswith('"') and value_str.endswith('"')):
+                    if "," in value_str or "\n" in value_str or ":" in value_str or ";" in value_str:
+                        # Escape quotes if present
+                        if '"' in value_str:
+                            value_str = value_str.replace('"', '\\"')
+                        value_str = f'"{value_str}"'
             row_values.append(value_str)
-        row = " | ".join(row_values)
-        lines.append(f"{prefix}{row}")
+        row = ",".join(row_values)
+        lines.append(f"{data_prefix}{row}")
     
     return "\n".join(lines)
 
@@ -177,10 +227,10 @@ def _value_to_toon(value: Any, indent: int, level: int) -> str:
         return str(value)
     
     if isinstance(value, str):
-        # Escape if contains special characters
-        if any(char in value for char in ['\n', '\t', ':', '|', '"']):
-            # Simple escaping - in production, use proper escaping
-            escaped = value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        # Don't escape here - let the caller decide if quoting is needed
+        # Only escape actual control characters
+        if '\n' in value or '\t' in value or '\r' in value:
+            escaped = value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
             return f'"{escaped}"'
         return value
     
