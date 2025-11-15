@@ -2,7 +2,7 @@
 Core TOON conversion functions
 """
 
-from typing import Any, Union
+from typing import Any
 
 
 def to_toon(data: Any, indent: int = 2) -> str:

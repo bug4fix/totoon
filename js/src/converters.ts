@@ -115,7 +115,7 @@ function xmlElementToDict(element: any): ToonValue {
     } else if (typeof value === 'object' && value !== null) {
       result[key] = xmlElementToDict(value);
     } else {
-      result[key] = value;
+      result[key] = value as ToonValue;
     }
   }
 

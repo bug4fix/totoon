@@ -2,7 +2,6 @@
 Tests for core TOON conversion functionality
 """
 
-import pytest
 from totoon.core import to_toon
 
 

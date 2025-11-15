@@ -181,8 +181,10 @@ function listOfObjectsToToon(
           // Array of objects: use compact inline tabular format
           const nestedKeysDict: { [key: string]: boolean } = {};
           for (const nestedObj of value) {
-            for (const nk of Object.keys(nestedObj)) {
-              nestedKeysDict[nk] = true;
+            if (typeof nestedObj === 'object' && nestedObj !== null && !Array.isArray(nestedObj)) {
+              for (const nk of Object.keys(nestedObj)) {
+                nestedKeysDict[nk] = true;
+              }
             }
           }
           const nestedKeys = Object.keys(nestedKeysDict);
@@ -192,17 +194,19 @@ function listOfObjectsToToon(
           // Build compact data rows separated by semicolons
           const nestedRows: string[] = [];
           for (const nestedObj of value) {
-            const nestedRowValues: string[] = [];
-            for (const nk of nestedKeys) {
-              const nv = (nestedObj as any)[nk] ?? '';
-              let nvStr = valueToToon(nv, 0, 0);
-              // Escape if contains special chars
-              if (nvStr.includes(',') || nvStr.includes(';') || nvStr.includes(':')) {
-                nvStr = `"${nvStr}"`;
+            if (typeof nestedObj === 'object' && nestedObj !== null && !Array.isArray(nestedObj)) {
+              const nestedRowValues: string[] = [];
+              for (const nk of nestedKeys) {
+                const nv = (nestedObj as any)[nk] ?? '';
+                let nvStr = valueToToon(nv, 0, 0);
+                // Escape if contains special chars
+                if (nvStr.includes(',') || nvStr.includes(';') || nvStr.includes(':')) {
+                  nvStr = `"${nvStr}"`;
+                }
+                nestedRowValues.push(nvStr);
               }
-              nestedRowValues.push(nvStr);
+              nestedRows.push(nestedRowValues.join(','));
             }
-            nestedRows.push(nestedRowValues.join(','));
           }
           
           valueStr = `[${nestedCount}]{${nestedFields}}:${nestedRows.join(';')}`;

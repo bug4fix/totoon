@@ -3,7 +3,6 @@ Format converters for various input formats to TOON
 """
 
 import json
-from typing import Any, Union
 from pathlib import Path
 
 try:

@@ -9,7 +9,7 @@ from pathlib import Path
 # Add parent directory to path for development
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from totoon import to_toon, json_to_toon, yaml_to_toon
+from totoon import to_toon, json_to_toon
 
 # Example 1: Simple dictionary
 print("=== Example 1: Simple Dictionary ===")
