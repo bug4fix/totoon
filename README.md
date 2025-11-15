@@ -23,6 +23,34 @@ TOON is a compact data format that reduces token usage by 30-60% compared to JSO
 pip install totoon
 ```
 
+### Go
+
+In your Go project (must be in a directory with `go.mod`):
+
+```bash
+go get github.com/bug4fix/totoon/go@v0.1.0
+```
+
+If you don't have a Go module yet, initialize one first:
+```bash
+go mod init your-project-name
+go get github.com/bug4fix/totoon/go@v0.1.0
+```
+
+### JavaScript/TypeScript
+
+```bash
+npm install totoon
+```
+
+### Rust
+
+Add to your `Cargo.toml`:
+```toml
+[dependencies]
+totoon = "0.1.0"
+```
+
 ## Quick Start
 
 ### Python
@@ -44,11 +72,9 @@ print(toon_output)
 
 Output:
 ```
-users:
-  name | age
-  --- | ---
-  Alice | 30
-  Bob | 25
+users[2]{name,age}:
+  Alice,30
+  Bob,25
 ```
 
 ### Convert from JSON
@@ -101,11 +127,9 @@ TOON (Token-Oriented Object Notation) is designed specifically for LLM interacti
 
 **TOON:**
 ```
-users:
-  name | age
-  --- | ---
-  Alice | 30
-  Bob | 25
+users[2]{name,age}:
+  Alice,30
+  Bob,25
 ```
 *~35 tokens (56% reduction!)*
 
