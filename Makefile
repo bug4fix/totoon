@@ -4,13 +4,13 @@ install:
 	pip install -e ".[dev]"
 
 test:
-	pytest tests/ -v
+	pytest python/tests/ -v
 
 lint:
-	ruff check python tests
+	ruff check python python/tests python/examples
 
 format:
-	black python tests examples
+	black python python/tests python/examples
 
 clean:
 	rm -rf build/
