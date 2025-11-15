@@ -8,7 +8,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-totoon = "0.1.0"
+totoon = "0.1.1"
 serde_json = "1.0"
 ```
 

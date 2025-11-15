@@ -7,103 +7,7 @@ TOON is a compact data format that reduces token usage by 30-60% compared to JSO
 [![GitHub](https://img.shields.io/github/license/bug4fix/totoon)](https://github.com/bug4fix/totoon)
 [![GitHub stars](https://img.shields.io/github/stars/bug4fix/totoon)](https://github.com/bug4fix/totoon)
 
-## Features
-
-- 🚀 Convert JSON, YAML, XML, and more to TOON format
-- 📦 Multi-language SDK support (starting with Python)
-- ⚡ High-performance conversion
-- 🔧 Easy to integrate
-- 📚 Comprehensive documentation
-
-## Installation
-
-### Python
-
-```bash
-pip install totoon
-```
-
-### Go
-
-In your Go project (must be in a directory with `go.mod`):
-
-```bash
-go get github.com/bug4fix/totoon/go@v0.1.0
-```
-
-If you don't have a Go module yet, initialize one first:
-```bash
-go mod init your-project-name
-go get github.com/bug4fix/totoon/go@v0.1.0
-```
-
-### JavaScript/TypeScript
-
-```bash
-npm install totoon
-```
-
-### Rust
-
-Add to your `Cargo.toml`:
-```toml
-[dependencies]
-totoon = "0.1.0"
-```
-
-## Quick Start
-
-### Python
-
-```python
-from totoon import to_toon
-
-# Convert Python dict to TOON
-data = {
-    "users": [
-        {"name": "Alice", "age": 30},
-        {"name": "Bob", "age": 25}
-    ]
-}
-
-toon_output = to_toon(data)
-print(toon_output)
-```
-
-Output:
-```
-users[2]{name,age}:
-  Alice,30
-  Bob,25
-```
-
-### Convert from JSON
-
-```python
-from totoon import json_to_toon
-
-json_str = '{"name": "Alice", "age": 30}'
-toon_output = json_to_toon(json_str)
-print(toon_output)
-```
-
-### Convert from YAML
-
-```python
-from totoon import yaml_to_toon
-
-yaml_str = """
-users:
-  - name: Alice
-    age: 30
-  - name: Bob
-    age: 25
-"""
-toon_output = yaml_to_toon(yaml_str)
-print(toon_output)
-```
-
-## Why TOON?
+## What is TOON?
 
 TOON (Token-Oriented Object Notation) is designed specifically for LLM interactions:
 
@@ -133,6 +37,15 @@ users[2]{name,age}:
 ```
 *~35 tokens (56% reduction!)*
 
+## Language Support
+
+totoon is available for multiple programming languages:
+
+- ✅ **[Python](python/README.md)** - `pip install totoon`
+- ✅ **[JavaScript/TypeScript](js/README.md)** - `npm install totoon`
+- ✅ **[Go](go/README.md)** - `go get github.com/bug4fix/totoon/go@v0.1.1`
+- ✅ **[Rust](rust/README.md)** - Add `totoon = "0.1.1"` to `Cargo.toml`
+
 ## Supported Formats
 
 - ✅ JSON
@@ -141,12 +54,74 @@ users[2]{name,age}:
 - 🔄 CSV (coming soon)
 - 🔄 TOML (coming soon)
 
-## Language Support
+## Quick Start
 
-- ✅ Python
-- ✅ JavaScript/TypeScript
-- ✅ Go
-- ✅ Rust
+### Python
+
+```bash
+pip install totoon
+```
+
+```python
+from totoon import to_toon
+
+data = {"users": [{"name": "Alice", "age": 30}]}
+print(to_toon(data))
+```
+
+See [Python README](python/README.md) for more details.
+
+### JavaScript/TypeScript
+
+```bash
+npm install totoon
+```
+
+```typescript
+import { toToon } from 'totoon';
+
+const data = { users: [{ name: "Alice", age: 30 }] };
+console.log(toToon(data));
+```
+
+See [JavaScript/TypeScript README](js/README.md) for more details.
+
+### Go
+
+```bash
+go get github.com/bug4fix/totoon/go@v0.1.1
+```
+
+```go
+import "github.com/bug4fix/totoon/go"
+
+data := map[string]interface{}{
+    "users": []interface{}{
+        map[string]interface{}{"name": "Alice", "age": 30},
+    },
+}
+fmt.Println(totoon.ToToon(data))
+```
+
+See [Go README](go/README.md) for more details.
+
+### Rust
+
+Add to `Cargo.toml`:
+```toml
+[dependencies]
+totoon = "0.1.1"
+```
+
+```rust
+use totoon::to_toon;
+use serde_json::json;
+
+let data = json!({"users": [{"name": "Alice", "age": 30}]});
+println!("{}", to_toon(&data));
+```
+
+See [Rust README](rust/README.md) for more details.
 
 ## Repository
 
@@ -162,10 +137,8 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md).
 
-
 ## Business Model
 
 This project follows an **Open Source + Enterprise SaaS** model:
 - **Open Source**: Core SDKs are free and open source
 - **Enterprise**: Cloud API, advanced features, and support available for enterprise customers (coming soon)
-
