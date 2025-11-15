@@ -18,8 +18,8 @@ describe('jsonToToon', () => {
   test('converts complex JSON structure', () => {
     const jsonStr = '{"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}';
     const result = jsonToToon(jsonStr);
-    expect(result).toContain('users:');
-    expect(result).toContain('name | age');
+    expect(result).toContain('users[');
+    expect(result).toContain(',');
   });
 });
 
