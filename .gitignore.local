@@ -1,0 +1,15 @@
+# Local development files (copy this to .gitignore if you want to track your local setup)
+# This file is NOT tracked by git - it's just a template
+
+# Your local notes
+NOTES.md
+TODO.md
+
+# Local test files
+test_local.*
+scratch.*
+
+# IDE specific (if not already in .gitignore)
+.vscode/settings.json
+.idea/workspace.xml
+

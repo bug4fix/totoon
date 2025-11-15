@@ -1,0 +1,23 @@
+# Ensure consistent line endings
+* text=auto
+
+# Language-specific files
+*.py text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.go text eol=lf
+*.rs text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+

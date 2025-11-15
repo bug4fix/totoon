@@ -1,0 +1,92 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.log
+
+# Python symlink (created for development)
+totoon
+
+# Rust build artifacts
+rust/target/
+rust/Cargo.lock
+
+# JavaScript build artifacts
+js/node_modules/
+js/dist/
+js/coverage/
+js/*.tsbuildinfo
+
+# Go build artifacts
+go/*.test
+go/totoon.test
+
+# Internal documentation and scripts (not for community)
+QUICK_START.md
+PUBLISHING.md
+README_PUBLISHING.md
+SETUP.md
+FILES_TO_COMMIT.md
+scripts/publish.sh
+
